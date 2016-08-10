@@ -1,0 +1,25 @@
+# pyCharm ignores
+.idea/*.iml
+.idea/*.xml
+.idea/*.ids
+!.idea/dictionaries/
+
+# archive ignores
+archive/*
+!archive/README.md
+
+# database files
+*.db
+
+# backup files
+*~
+*.bak
+*.old
+
+__pycache__
+*.pyc
+*.log
+
+# credential, storage file
+credential.json
+storage.json

@@ -1,0 +1,16 @@
+Version 1.0.1
+=============
+LifeMotif-Diem 으로 저장소 독립.
+
+Version 1.0.0
+=============
+첫 버전. Lifemotif의 cli 모듈인 diem의 완성.
+diem은 'Carpe Diem'의 그 diem이다. 더 괜찮은 코드네임이 있다면 변경바람.
+
+사용법
+-----
+1. cli.py --create-table
+2. 구글 개발자 콘솔에서 credential.json 다운로드
+3. cli.py --authorize 명령으로 OAUTH2 인증 처리.
+4. cli.py --list-label --email <email> 로 어떤 메일함을 사용할 건지 결정.
+5. cli.py --fetch --email <email> --label-id <label_id> 명령으로 이메일 메시지 다운로드.
