@@ -31,7 +31,11 @@ def fetch_structure(service, email, label_id, latest_tid):
     first_loop = True
     output = []
 
-    logger.info('Structure fetching started. email: %s, label_id: %s, latest_tid: %x' % (email, label_id, latest_tid))
+    logger.info(
+        'Structure fetching started. email: %s, label_id: %s, latest_tid: %d(0x%X)' % (
+            email, label_id, latest_tid, latest_tid
+        )
+    )
 
     while page_token or first_loop:
 
