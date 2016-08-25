@@ -1,303 +1,88 @@
-from argparse import ArgumentParser
-from sys import exit, stdout
-from os.path import expanduser
+from logging import getLogger
 
-import logging
-import logging.config
+from . import db as diem_db
+from gmail.api import get_service
+from gmail import fetch as gmail_fetch
 
-from diem import diem_db
-
-logger = logging.getLogger(__name__)
+logger = getLogger(__name__)
 
 
-class DiemLogging(object):
-    log_format = '%(asctime)s [%(levelname)s] %(name)s (%(lineno)s): %(message)s'
-
-    log_config = {
-        'version': 1,
-        'formatters': {
-            'verbose': {
-                'format': log_format,
-                'datefmt': '%Y-%m-%d %H:%M:%S',
-            },
-            'simple': {
-                'format': '%(levelname)-8s %(message)s',
-            }
-        },
-        'filters': {
-        },
-        'handlers': {
-            'console': {
-                'class': 'logging.StreamHandler',
-                'formatter': 'simple',
-                'level': 'INFO',
-                'filters': [],
-            },
-            'file': {
-                'class': 'logging.handlers.RotatingFileHandler',
-                'filename': None,  # Set this!
-                'formatter': 'verbose',
-                'filters': [],
-                'level': 'DEBUG',
-                'maxBytes': 20 * 1024,  # 20KiB
-                'backupCount': 10,       #
-                'encoding': 'utf-8',
-            },
-            'null': {
-                'class': 'logging.NullHandler',
-                'level': 'DEBUG',
-            }
-        },
-        'loggers': {
-            '__main__': {
-                'handlers': ['console', 'file'],
-                'propagate': True,
-                'level': 'DEBUG',
-            },
-            'diem': {
-                'handlers': ['console', 'file'],
-                'propagate': True,
-                'level': 'DEBUG',
-            },
-            'googleapiclient': {
-                'handlers': ['null'],
-                'propagate': False,
-                'level': 'DEBUG',
-            }
-        }
-    }
-
-    @staticmethod
-    def get_log_level_value(log_level):
-        numeric_level = getattr(logging, log_level.upper(), None)
-        if not isinstance(numeric_level, int):
-            raise ValueError('Invalid log level %s' % log_level)
-
-        return numeric_level
-
-    @staticmethod
-    def get_log_stream(log_file):
-        if log_file == '-':
-            log_stream = stdout
-        else:
-            log_stream = open(log_file, 'a')
-
-        return log_stream
-
-    @classmethod
-    def set_basic_config(cls, log_level, log_file):
-        log_stream = cls.get_log_level_value(log_file)
-        numeric_level = cls.get_log_level_value(log_level)
-        logging.basicConfig(format=cls.log_format, stream=log_stream, level=numeric_level)
-
-    @classmethod
-    def set_dict_config(cls, log_level, log_file):
-        cls.log_config['handlers']['file']['level'] = log_level
-        cls.log_config['handlers']['file']['filename'] = log_file
-        logging.config.dictConfig(cls.log_config)
+def authorize(credential, storage):
+    from gmail.api import authorize
+    authorize(credential_file=credential, storage_file=storage)
+    logger.info('Authorization process complete.')
 
 
-class DiemArguments(object):
-    @staticmethod
-    def get_arguments():
-        parser = ArgumentParser()
-
-        parser.add_argument('-c', '--credential', default='credential.json',
-                            help='Credential file path. Defaults to credential.json.')
-
-        parser.add_argument('-d', '--database', default='diem.db', help='Database path. Defaults to diem.db.')
-
-        parser.add_argument('-e', '--email', help='Your email address.')
-
-        parser.add_argument('-f', '--log-file', default='lifemotif-diem.log',
-                            help='Log file path. Defaults to lifemotif-diem.log.')
-
-        parser.add_argument('-k', '--label-id', help='Your target email label.')
-
-        parser.add_argument('-l', '--log-level',
-                            choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', ],
-                            default='INFO',
-                            help='Log level. Defaults to INFO.')
-
-        parser.add_argument('-s', '--storage', default='storage.json',
-                            help='OAUTH2 storage path. Defaults to storage.json')
-
-        parser.add_argument('--authorize', action='store_true', help='Authorization mode.')
-
-        parser.add_argument('--create-tables', action='store_true', help='Creating table mode. Create database tables.')
-
-        parser.add_argument('--fetch', action='store_true', help='Fetch mode. Store your emails locally.')
-
-        parser.add_argument('--list-label', action='store_true', help='Label listing mode. List your email labels.')
-
-        parser.add_argument('--dest-dir', default='archive',
-                            help='MIME Message output path. Defaults to archive. Only applied to fetch mode.')
-
-        parser.add_argument('--latest-tid', type=str, default='latest',
-                            help='Number of latest thread id. Only applied when you fetch. '
-                                 'Set 0 to fetch unlimited number of emails, '
-                                 'or input hexadecimal value to fetch emails whose id is greater than the value.')
-
-        parser.add_argument('-v', '--version', action='store_true',
-                            help='Show program version.')
-
-        parsed = parser.parse_args()
-
-        for attr in ['credential', 'storage', 'database', 'dest_dir', 'log_file']:
-            if not hasattr(parsed, attr):
-                continue
-            val = getattr(parsed, attr)
-            if '~' in val:
-                setattr(parsed, attr, expanduser(val))
-
-        return parsed
+def get_labels(storage, email):
+    from gmail.api import get_service, get_labels
+    labels = get_labels(service=get_service(storage), email=email)
+    return labels
 
 
-class Diem(object):
-    version = '1.0.2'
+def create_tables(conn):
+    diem_db.create_tables(conn)
+    logger.info('create_tables completed.')
 
-    def __init__(self):
-        self.conn = None
-        self.arguments = None
 
-    def __del__(self):
-        self.conn_close()
+def drop_tables(conn):
+    diem_db.drop_tables(conn)
+    logger.info('drop_tables completed.')
 
-    def conn_close(self):
-        if self.conn:
-            self.conn.close()
-            self.conn = None
 
-    def create_tables(self):
-        """
-        DB table creation
-        """
-        diem_db.create_tables(self.conn)
-        logger.info('Tables are created successfully.')
+def update_database(conn, storage, email, label_id):
 
-    @staticmethod
-    def authorize(credential, storage):
-        """
-        Authorization process
-        Required:
-            credential file path
-            storage file path
-        """
-        from diem.gmail_api import authorize
-        authorize(credential_file=credential, storage_file=storage)
-        logger.info('Authorization process complete.')
+    logger.info('update_database started.')
 
-    @staticmethod
-    def get_labels(storage, email):
-        """
-        Label listing process
-        Required:
-           storage file path (you must be authorized)
-           email address
-        """
-        from diem.gmail_api import get_service, get_labels
-        labels = get_labels(service=get_service(storage), email=email)
-        return labels
+    service = get_service(storage)
 
-    def fetch(self, storage, email, label_id, latest_tid, dest_dir):
-        """
-        Email fetching process
-        Required:
-           storage file path (you must be authorized)
-           email address
-           label id
-           output path
-        """
-        from diem.diem_db import get_latest_tid, update_date_index, update_id_index
-        from diem.gmail_api import get_service
-        from diem.gmail_fetch import fetch_structure, fetch_diary_dates, fetch_reply_mails
+    # fetch structure: list of (mid, tid)
+    structure = gmail_fetch.fetch_structure(
+        service=service,
+        email=email,
+        label_id=label_id,
+        latest_tid=diem_db.get_latest_tid(conn)
+    )
 
-        # service
-        service = get_service(storage)
+    diem_db.update_id_index(conn, structure)
 
-        if latest_tid == 'latest':
-            _latest_tid = get_latest_tid(self.conn)
-        else:
-            _latest_tid = int(latest_tid, 16)
+    # extract all diary date within alarm mails: dict mid --> date
+    date_indices = gmail_fetch.extract_diary_dates(
+        service=service,
+        email=email,
+        structure=structure
+    )
 
-        # update email structure from latest tid
-        structure = fetch_structure(
-            service=service,
-            email=email,
-            label_id=label_id,
-            latest_tid=_latest_tid
-        )
+    diem_db.update_date_index(conn, date_indices)
 
-        # update id index.
-        # with id index, we can identify message id / thread id groups
-        update_id_index(self.conn, structure)
+    logger.info('update_database completed.')
 
-        # fetch diary date from alarm mails ...
-        dates = fetch_diary_dates(service, email, structure)
+    return structure, date_indices
 
-        # and store into database
-        update_date_index(self.conn, dates)
 
-        # fetch reply mails
-        fetch_reply_mails(service, email, structure, dest_dir)
+def rebuild_database(conn, storage, email, label_id):
+    logger.info('rebuild_database started.')
+    drop_tables(conn)
+    create_tables(conn)
+    update_database(conn, storage, email, label_id)
+    logger.info('rebuild_database completed.')
 
-        logger.info('Fetching complete.')
 
-    @staticmethod
-    def error_email_address_required():
-        from sys import stderr
-        print('Email address is required. Please input your email with -e/--email option.', file=stderr)
+def query(conn, query_string):
+    raise Exception('Not implemented yet!')
 
-    @staticmethod
-    def error_label_id_required():
-        from sys import stderr
-        print('Label ID is required. Please input desired email label id with -k/--label-id option.', file=stderr)
 
-    def run_cli(self):
-        self.conn_close()
-        self.arguments = DiemArguments.get_arguments()
-        self.conn = diem_db.open_db(self.arguments.database)
+def fetch(storage, email, archive_path, mid_list):
+    service = get_service(storage)
+    gmail_fetch.fetch_and_archive(service, email, archive_path, mid_list)
 
-        DiemLogging.set_dict_config(self.arguments.log_level, self.arguments.log_file)
 
-        if self.version:
-            print(self.version)
-            return
+def fetch_incrementally(conn, storage, email, label_id, archive_path):
+    logger.info('fetch_incrementally started.')
 
-        if self.arguments.create_tables:
-            self.create_tables()
-            return
+    structure, date_indices = update_database(conn, storage, email, label_id)
 
-        if self.arguments.authorize:
-            self.authorize(self.arguments.credential, self.arguments.storage)
-            return
+    mid_list = [mid for mid, tid in structure if mid != tid]
 
-        if self.arguments.list_label:
-            # argument checking
-            if not self.arguments.email:
-                self.error_email_address_required()
-                exit(1)
+    gmail_fetch.fetch_and_archive(storage, email, archive_path, mid_list)
 
-            labels = self.get_labels(self.arguments.storage, self.arguments.email)
-
-            for label in labels:
-                print('%s %s' % (label['id'], label['name']))
-            return
-
-        if self.arguments.fetch:
-            # argument checking
-            if not self.arguments.email:
-                self.error_email_address_required()
-                exit(1)
-            if not self.arguments.label_id:
-                self.error_label_id_required()
-                exit(1)
-
-            self.fetch(
-                self.arguments.storage,
-                self.arguments.email,
-                self.arguments.label_id,
-                self.arguments.latest_tid,
-                self.arguments.dest_dir
-            )
-            return
+    logger.info('fetch_incrementally completed.')

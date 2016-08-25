@@ -1,5 +1,5 @@
 # LifeMotif Diem
-LifeMotif Diem is a simple CLI interface to fetch and store Gmail emails.
+LifeMotif Diem is a simple CLI interface to fetch and to store Gmail emails.
 
 ## How to Use
 
@@ -10,26 +10,24 @@ Login to google.com and access to [Google Cloud Platform](https://console.cloud.
 ### Install and Setup DB
 Diem uses SQLite3 db. Install and initialize with the commands below:
 
-  ```./diem-cli.py --create-tables --database <database_path>```
+  ```./run.py create-tables --database <database_path>```
 
 ### Authorize
 Authorize to gmail.
 
-  ```./diem-cli.py --authorize --storage <storage_path>```
+  ```./run.py authorize --credential <credential_path> --storage <storage_path>```
   
 A url will appear. Copy it and paste it to a web browser. Proceed to authorize. After authorization, a code will be displayed in the web browser. Past the code to console.
 
 ### List your mail boxes
-Before fetching, check your authorization status and decide a target mail box.
+Before fetching, you need to identify your email box id.
 
-  ```./diem-cli.py --list-label --storage <storage_path> --credential <credential_path> --email <your_email_address>```
+  ```./run.py list-label --storage <storage_path> --email <your_email_address>```
 
 Choose your email box and copy Label ID. It is like Label_83.
 
 
-### Fetch your email     
-  ```./diem-cli.py --fetch --database <database_path> --storage <storage_path> --credential <credential_path> --email <your_email_address> --label-id <label_id> --dest-dir <destination_directory>```
-    
-You can limit your fetch by using --latest-tid argument. 
+### Fetch your email incrementally
+  ```./run.py --fetch-incrementally --database <database_path> --storage <storage_path> --email <your_email_address> --label-id <label_id> --archive-path <archive_path>```
 
-Please do not stop the program while fetching.
+See ./run.py --help for help.

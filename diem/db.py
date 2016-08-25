@@ -26,6 +26,19 @@ def create_tables(conn):
         '''
     ]
 
+    return execute_and_commit(conn, queries)
+
+
+def drop_tables(conn):
+    queries = [
+        'DROP TABLE diem_date_index',
+        'DROP TABLE diem_id_index',
+    ]
+
+    return execute_and_commit(conn, queries)
+
+
+def execute_and_commit(conn, queries):
     c = conn.cursor()
     for query in queries:
         c.execute(query)
@@ -62,3 +75,7 @@ def update_id_index(conn, structure):
     c = conn.cursor()
     c.executemany('INSERT OR REPLACE INTO diem_id_index (mid, tid) VALUES (?, ?)', mid_tid_items)
     conn.commit()
+
+
+def is_valid_mid(conn, mid):
+    return conn.execute('SELECT COUNT(*) FROM diem_id_index WHERE mid=?', (mid, )).fetchone()[0]

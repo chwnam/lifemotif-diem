@@ -8,9 +8,11 @@ from os.path import isabs as path_isabs
 from os.path import expanduser, realpath, join as path_join
 from logging import getLogger
 
+from googleapiclient.errors import HttpError
+
 import re
 
-date_expr = re.compile(r'^Date: (.+?)$', re.DOTALL|re.MULTILINE)
+date_expr = re.compile(r'^Date: (.+?)$', re.DOTALL | re.MULTILINE)
 
 logger = getLogger(__name__)
 
@@ -32,7 +34,7 @@ def fetch_structure(service, email, label_id, latest_tid):
     output = []
 
     logger.info(
-        'Structure fetching started. email: %s, label_id: %s, latest_tid: %d(0x%X)' % (
+        'fetch_structure started. email: %s, label_id: %s, latest_tid: %d(0x%X)' % (
             email, label_id, latest_tid, latest_tid
         )
     )
@@ -68,7 +70,7 @@ def fetch_structure(service, email, label_id, latest_tid):
 
             output.append((message_id, thread_id))
 
-    logger.info('Structure fetching completed. Total %s items' % len(output))
+    logger.info('fetch_structure completed. Total %s items' % len(output))
 
     return output
 
@@ -94,13 +96,27 @@ def fetch_mail(service, email, message_id):
     :param message_id:
     :return:
     """
-    logger.debug('Fetching message id %x from %s' % (message_id, email, ))
-    response = service.users().messages().get(id='%x' % message_id, userId=email, format='raw').execute()
+    try:
+        response = service.users().messages().get(id='%x' % message_id, userId=email, format='raw').execute()
+        logger.debug('fetch_mail: %s, mid %d (0x%X)' % (email, message_id, message_id))
+
+    except HttpError:
+        logger.error('Email address \'%s\', message id: %d (0x%X) not found.' % (email, message_id, message_id))
+        response = None
 
     return response
 
 
-def fetch_diary_dates(service, email, structure):
+def extract_diary_dates(service, email, structure):
+
+    logger.info(
+        'extract_diary_dates started. email: %s, structure: %d item(s).' %
+        (email, len(structure))
+    )
+
+    # Please be patient!
+    # It may take minutes because every alarm mail in the structure is going to be fetched
+    #  to extract its date field within.
 
     output = {}
 
@@ -109,6 +125,7 @@ def fetch_diary_dates(service, email, structure):
         if message_id != thread_id:
             continue
 
+        # you have to fetch every single message to get date header field.
         message = fetch_mail(service, email, message_id)
         raw_message = urlsafe_b64decode(message['raw']).decode('ascii')
 
@@ -123,33 +140,43 @@ def fetch_diary_dates(service, email, structure):
 
         assert date is not None
 
-        logger.debug('Message id %x, diary date extracted: %s.' % (message_id, date))
+        logger.debug('Message id %x, diary date %s extracted.' % (message_id, date))
 
         output[message_id] = date
+
+    logger.info('extract_diary_dates completed. %d date(s).' % len(output))
 
     return output
 
 
-def fetch_reply_mails(service, email, structure, dest_dir):
+def fetch_and_archive(service, email, archive_path, mid_list):
 
-    if path_isabs(dest_dir):
-        output_dir = realpath(dest_dir)
+    logger.info(
+        'fetch_and_archive started. email: %s, archive_path: %s, mid_list: %d message(s)' %
+        (email, archive_path, len(mid_list))
+    )
+
+    if path_isabs(archive_path):
+        output_dir = realpath(archive_path)
     else:
-        output_dir = realpath(expanduser(path_join(getcwd(), dest_dir)))
+        output_dir = realpath(expanduser(path_join(getcwd(), archive_path)))
 
     count = 0
+    error = 0
 
-    for message_id, thread_id in structure:
-        if message_id == thread_id:
+    for mid in mid_list:
+
+        file_name = path_join(output_dir, ('%x.gz' % mid))
+        message = fetch_mail(service, email, mid)
+
+        if not message:
+            error += 1
             continue
-
-        file_name = path_join(output_dir, ('%x.gz' % message_id))
-        message = fetch_mail(service, email, message_id)
 
         with gzip_open(file_name, 'wb') as f:
             f.write(urlsafe_b64decode(message['raw']))
-            logger.debug('Message id %x gzipped to %s.' % (message_id, file_name))
+            logger.debug('Message id %x gzipped to %s.' % (mid, file_name))
 
         count += 1
 
-    logger.info('Fetching reply mails completed. Total %d items saved.' % count)
+    logger.info('fetch_and_archive completed. Total %d item(s) saved. Error %d item(s).' % (count, error))
