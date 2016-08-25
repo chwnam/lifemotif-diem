@@ -1,1 +1,1 @@
-DIEM_VERSION = '1.1.0'
+DIEM_VERSION = '1.1.1'

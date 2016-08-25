@@ -82,7 +82,8 @@ def fetch_incrementally(conn, storage, email, label_id, archive_path):
     structure, date_indices = update_database(conn, storage, email, label_id)
 
     mid_list = [mid for mid, tid in structure if mid != tid]
-
-    gmail_fetch.fetch_and_archive(storage, email, archive_path, mid_list)
+    if mid_list:
+        service = get_service(storage)
+        gmail_fetch.fetch_and_archive(service, email, archive_path, mid_list)
 
     logger.info('fetch_incrementally completed.')
