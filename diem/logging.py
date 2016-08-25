@@ -90,6 +90,10 @@ def set_basic_config(log_level, log_file):
 
 
 def set_dict_config(log_level, log_file):
+
+    log_config['handlers']['console']['level'] = log_level
+
     log_config['handlers']['file']['level'] = log_level
     log_config['handlers']['file']['filename'] = log_file
+
     logging.config.dictConfig(log_config)
