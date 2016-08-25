@@ -32,7 +32,7 @@ log_config = {
             'formatter': 'verbose',
             'filters': [],
             'level': 'DEBUG',
-            'maxBytes': 20 * 1024,  # 20KiB
+            'maxBytes': 512 * 1024,  # 512KiB
             'backupCount': 10,  #
             'encoding': 'utf-8',
         },
