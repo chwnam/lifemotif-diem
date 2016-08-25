@@ -48,8 +48,11 @@ def build_parser():
     add_rebuild_database_parser(subparsers)
 
     add_query_parser(subparsers)
+
     add_fetch_parser(subparsers)
     add_fetch_incrementally_parser(subparsers)
+
+    add_fix_missing_parser(subparsers)
 
     return parser
 
@@ -64,11 +67,6 @@ def filter_arg_values(args, attributes, decision_func, filter_func):
             elif type(val) == list:
                 r = [filter_func(x) if decision_func(x) else x for x in val]
                 setattr(args, attr, r)
-                # for x in val:
-                #     if decision_func(x):
-                #         r.append(filter_func(x) if decision_func(x) else x)
-
-
 
 
 # sub parsers below ##############################################################################################
@@ -144,6 +142,15 @@ def add_fetch_incrementally_parser(subparsers):
     add_storage_argument(p)
     add_email_argument(p)
     add_label_id_argument(p)
+    add_archive_path_argument(p)
+
+
+def add_fix_missing_parser(subparsers):
+    p = subparsers.add_parser('fix-missing', aliases=['fm'])
+
+    add_db_argument(p)
+    add_storage_argument(p)
+    add_email_argument(p)
     add_archive_path_argument(p)
 
 # end of subparsers ##############################################################################################

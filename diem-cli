@@ -58,6 +58,9 @@ elif [[ $SUBCOMMAND == "fetch" || $SUBCOMMAND == "f" ]]; then
 
 elif [[ $SUBCOMMAND == "fetch-incrementally" || $SUBCOMMAND == "fi" ]]; then
 	OPT="--database $DATABASE --storage $STORAGE --email $EMAIL --label-id $LABEL_ID --archive-path $ARCHIVE_PATH  ${@:2}"
+
+elif [[ $SUBCOMMAND == "fix-missing" || $SUBCOMMAND == "fm" ]]; then
+	OPT="--database $DATABASE --storage $STORAGE --email $EMAIL --archive-path $ARCHIVE_PATH  ${@:2}"
 fi
 
 if [[ ! -z $OPT ]]; then

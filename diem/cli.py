@@ -101,5 +101,13 @@ class DiemCLI(object):
                 archive_path=self.args.archive_path
             )
 
+        elif self.args.subcommand in ('fix-missing', 'fm'):
+            diem.fix_missing(
+                conn=conn,
+                storage=self.args.storage,
+                email=self.args.email,
+                archive_path=self.args.archive_path
+            )
+
         if conn:
             conn.close()

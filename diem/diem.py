@@ -1,4 +1,6 @@
 from logging import getLogger
+from os.path import join as path_join
+from os.path import exists as path_exists
 
 from . import db as diem_db
 from gmail.api import get_service
@@ -87,3 +89,26 @@ def fetch_incrementally(conn, storage, email, label_id, archive_path):
         gmail_fetch.fetch_and_archive(service, email, archive_path, mid_list)
 
     logger.info('fetch_incrementally completed.')
+
+
+def fix_missing(conn, storage, email, archive_path):
+    logger.info('fix_missing started.')
+
+    q = "SELECT mid FROM diem_id_index WHERE mid != tid ORDER BY mid DESC"
+    mid_list = []
+
+    for row in conn.execute(q):
+
+        mid = row[0]
+
+        message_path = path_join(archive_path, '%x.gz' % mid)
+        if path_exists(message_path):
+            logger.debug('mid %d (0x%x) already archived.' % (mid, mid))
+        else:
+            logger.debug('mid %d (0x%x) not archived. Append to mid_list' % (mid, mid))
+            mid_list.append(mid)
+
+    fetch(storage, email, archive_path, mid_list)
+
+    logger.info('fix_missing_completed. %d message(s) archived.')
+
