@@ -40,7 +40,7 @@ def update_database(conn, storage, email, label_id):
         service=service,
         email=email,
         label_id=label_id,
-        latest_tid=diem_db.get_latest_tid(conn)
+        latest_mid=diem_db.get_latest_mid(conn)
     )
 
     diem_db.update_id_index(conn, structure)

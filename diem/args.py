@@ -18,7 +18,7 @@ def get_args():
         filter_func=expanduser
     )
 
-    expr = compile(r'^0x([0-9a-f]{8})$', IGNORECASE)
+    expr = compile(r'^0x([0-9a-f]{16})$', IGNORECASE)
 
     # convert hexadecimal strings into decimal strings
     filter_arg_values(
@@ -58,8 +58,17 @@ def filter_arg_values(args, attributes, decision_func, filter_func):
     for attr in attributes:
         if hasattr(args, attr):
             val = getattr(args, attr)
-            if decision_func(val):
-                setattr(args, attr, filter_func(val))
+            if type(val) == str:
+                if decision_func(val):
+                    setattr(args, attr, filter_func(val))
+            elif type(val) == list:
+                r = [filter_func(x) if decision_func(x) else x for x in val]
+                setattr(args, attr, r)
+                # for x in val:
+                #     if decision_func(x):
+                #         r.append(filter_func(x) if decision_func(x) else x)
+
+
 
 
 # sub parsers below ##############################################################################################

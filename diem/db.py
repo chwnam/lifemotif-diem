@@ -48,17 +48,17 @@ def execute_and_commit(conn, queries):
     return conn
 
 
-def get_latest_tid(conn):
-    query = '''SELECT MAX(tid) FROM diem_date_index'''
+def get_latest_mid(conn):
+    query = '''SELECT MAX(mid) FROM diem_id_index'''
 
     c = conn.cursor()
     c.execute(query)
 
-    tid = c.fetchone()[0]
-    if tid is None:
+    mid = c.fetchone()[0]
+    if mid is None:
         return 0
 
-    return tid
+    return mid
 
 
 def update_date_index(conn, dates):

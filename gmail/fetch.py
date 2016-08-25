@@ -19,14 +19,14 @@ logger = getLogger(__name__)
 TIMEZONE = 'Asia/Seoul'
 
 
-def fetch_structure(service, email, label_id, latest_tid):
+def fetch_structure(service, email, label_id, latest_mid):
     """
     Fetch message_id, thread_id of message box.
 
     :param service:
     :param email:
     :param label_id:
-    :param latest_tid:
+    :param latest_mid:
     :return: list of tuples: (message_id, thread_id)
     """
     page_token = ''
@@ -34,8 +34,8 @@ def fetch_structure(service, email, label_id, latest_tid):
     output = []
 
     logger.info(
-        'fetch_structure started. email: %s, label_id: %s, latest_tid: %d(0x%X)' % (
-            email, label_id, latest_tid, latest_tid
+        'fetch_structure started. email: %s, label_id: %s, latest_mid: %d (0x%x)' % (
+            email, label_id, latest_mid, latest_mid
         )
     )
 
@@ -63,8 +63,8 @@ def fetch_structure(service, email, label_id, latest_tid):
 
             logger.debug('message id: %s, thread id: %s' % (message['id'], message['threadId']))
 
-            if thread_id <= latest_tid:
-                logger.debug('latest_tid reached.')
+            if message_id <= latest_mid:
+                logger.debug('latest_mid reached.')
                 page_token = ''
                 break
 
@@ -98,10 +98,10 @@ def fetch_mail(service, email, message_id):
     """
     try:
         response = service.users().messages().get(id='%x' % message_id, userId=email, format='raw').execute()
-        logger.debug('fetch_mail: %s, mid %d (0x%X)' % (email, message_id, message_id))
+        logger.debug('fetch_mail: %s, mid %d (0x%x)' % (email, message_id, message_id))
 
     except HttpError:
-        logger.error('Email address \'%s\', message id: %d (0x%X) not found.' % (email, message_id, message_id))
+        logger.error('Email address \'%s\', message id: %d (0x%x) not found.' % (email, message_id, message_id))
         response = None
 
     return response
