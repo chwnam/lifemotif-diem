@@ -79,3 +79,17 @@ def update_id_index(conn, structure):
 
 def is_valid_mid(conn, mid):
     return conn.execute('SELECT COUNT(*) FROM diem_id_index WHERE mid=?', (mid, )).fetchone()[0]
+
+
+def get_diary_date(conn, mid):
+    query = '''
+            SELECT date_index.diary_date FROM diem_date_index AS date_index
+              JOIN diem_id_index AS id_index ON date_index.tid = id_index.tid
+            WHERE id_index.mid = ?
+            '''
+
+    result = conn.execute(query, (mid, )).fetchone()
+
+    if result:
+        return result[0]
+

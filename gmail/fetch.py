@@ -180,3 +180,20 @@ def fetch_and_archive(service, email, archive_path, mid_list):
         count += 1
 
     logger.info('fetch_and_archive completed. Total %d item(s) saved. Error %d item(s).' % (count, error))
+
+
+def get_archive(mid, archive_path):
+
+    if path_isabs(archive_path):
+        archive_dir = realpath(archive_path)
+    else:
+        archive_dir = realpath(expanduser(path_join(getcwd(), archive_path)))
+
+    path = path_join(archive_dir, '%x.gz' % mid)
+
+    with gzip_open(path, 'rb') as f:
+        mime = f.read()
+
+    logger.debug('Archive \'%s\' extracted successfully. %d bytes' % (path, len(mime)))
+
+    return mime

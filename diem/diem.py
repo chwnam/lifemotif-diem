@@ -131,9 +131,7 @@ def fix_missing(conn, storage, email, archive_path):
     mid_list = []
 
     for row in conn.execute(q):
-
         mid = row[0]
-
         message_path = path_join(archive_path, '%x.gz' % mid)
         if path_exists(message_path):
             logger.debug('mid %d (0x%x) already archived.' % (mid, mid))
@@ -145,3 +143,21 @@ def fix_missing(conn, storage, email, archive_path):
 
     logger.info('fix_missing_completed. %d message(s) archived.')
 
+
+def export(conn, mid, archive_path, timezone):
+    from importlib import import_module
+
+    diary_date = diem_db.get_diary_date(conn, mid)
+    if not diary_date:
+        logger.error('MID %s is not exist, or not fetched yet!')
+        return
+
+    class_ = getattr(import_module('diem.converters'), 'DefaultJSONConverter')
+
+    instance = class_(
+        message=gmail_fetch.get_archive(mid, archive_path),
+        diary_date=diary_date,
+        timezone=timezone
+    )
+
+    return instance.convert()

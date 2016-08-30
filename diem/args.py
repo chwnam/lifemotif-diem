@@ -62,6 +62,8 @@ def build_parser():
 
     add_fix_missing_parser(subparsers)
 
+    add_export_parser(subparsers)
+
     return parser
 
 
@@ -137,10 +139,7 @@ def add_fetch_parser(subparsers):
     add_storage_argument(p)
     add_email_argument(p)
     add_archive_path_argument(p)
-
-    p.add_argument('--mid', nargs='+',
-                   help='Fetch specific email by a mid (message id) value.',
-                   required=True)
+    add_mid_argument(p, required=True, nargs='+')
 
 
 def add_fetch_incrementally_parser(subparsers):
@@ -160,6 +159,16 @@ def add_fix_missing_parser(subparsers):
     add_storage_argument(p)
     add_email_argument(p)
     add_archive_path_argument(p)
+
+
+def add_export_parser(subparsers):
+    p = subparsers.add_parser('export', aliases=['e'])
+
+    add_db_argument(p)
+    add_mid_argument(p, required=True)
+    add_archive_path_argument(p)
+
+    p.add_argument('--list-converters', action='store_true')
 
 # end of subparsers ##############################################################################################
 
@@ -217,6 +226,12 @@ def add_query_string_argument(parser, **kwargs):
                         **kwargs)
 
 
+def add_mid_argument(parser, **kwargs):
+    parser.add_argument('--mid',
+                        help='Fetch specific email by a mid (message id) value.',
+                        **kwargs)
+
+
 def add_common_arguments(parser):
     parser.add_argument('--log-file', default='lifemotif-diem.log',
                         help='Log file path. Defaults to lifemotif-diem.log.')
@@ -225,6 +240,9 @@ def add_common_arguments(parser):
                         choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', ],
                         default='INFO',
                         help='Log level. Defaults to INFO.')
+
+    parser.add_argument('--timezone', default='Asia/Seoul')
+
     parser.add_argument('-v', '--version', action='version', version=DIEM_VERSION,
                         help='Show program version.')
 

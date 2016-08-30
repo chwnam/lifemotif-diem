@@ -61,7 +61,12 @@ elif [[ $SUBCOMMAND == "fetch-incrementally" || $SUBCOMMAND == "fi" ]]; then
 
 elif [[ $SUBCOMMAND == "fix-missing" || $SUBCOMMAND == "fm" ]]; then
 	OPT="--database $DATABASE --storage $STORAGE --email $EMAIL --archive-path $ARCHIVE_PATH  ${@:2}"
+
+elif [[ $SUBCOMMAND == "export" || $SUBCOMMAND == "e" ]]; then
+	OPT="--database $DATABASE --mid ${@:2} --archive-path $ARCHIVE_PATH"
+
 fi
+
 
 if [[ ! -z $OPT ]]; then
     cd $DIEM_PATH  # change directory, path variables may be relative!

@@ -1,9 +1,13 @@
 from logging import getLogger
 
+from pytz import timezone, utc
+
 from . import diem
 from .args import get_args
 from .db import open_db
 from .logging import set_dict_config
+from .converters import DiaryTemplateFactory
+
 
 logger = getLogger(__name__)
 
@@ -14,6 +18,11 @@ class DiemCLI(object):
         self.args = get_args()
 
         set_dict_config(self.args.log_level, self.args.log_file)
+
+        if hasattr(self.args, 'timezone'):
+            self.timezone = timezone(self.args.timezone)
+        else:
+            self.timezone = utc
 
     def confirm_cli(self, message):
         if hasattr(self.args, 'force') and not self.args.force:
@@ -108,6 +117,7 @@ class DiemCLI(object):
                 archive_path=self.args.archive_path
             )
 
+        # fix-missing
         elif self.args.subcommand in ('fix-missing', 'fm'):
             diem.fix_missing(
                 conn=conn,
@@ -115,6 +125,21 @@ class DiemCLI(object):
                 email=self.args.email,
                 archive_path=self.args.archive_path
             )
+
+        # export
+        elif self.args.subcommand in ('export', 'e'):
+
+            if self.args.list_converters:
+                raise Exception('export --list-converters is not implemented.')
+            else:
+                exported = diem.export(
+                    conn=conn,
+                    mid=self.args.mid,
+                    archive_path=self.args.archive_path,
+                    timezone=self.timezone
+                )
+
+                print(DiaryTemplateFactory.as_json(exported, indent=2))
 
         if conn:
             conn.close()
