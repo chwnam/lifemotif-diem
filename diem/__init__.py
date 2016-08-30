@@ -2,7 +2,7 @@ from os.path import isabs as path_isabs
 from os import getcwd
 from os.path import expanduser, realpath, join as path_join
 
-DIEM_VERSION = '1.1.1'
+DIEM_VERSION = '1.3.0'
 
 
 def get_absolute_path(path):

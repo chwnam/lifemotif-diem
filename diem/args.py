@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter
 from os.path import expanduser
 
 from . import DIEM_VERSION
@@ -13,7 +13,7 @@ def get_args():
     # expand ~ as home directory
     filter_arg_values(
         args=args,
-        attributes=['credential', 'storage', 'database', 'dest_dir', 'log_file'],
+        attributes=['log_file', ],
         decision_func=lambda v: len(v) > 1 and v[0] == '~',
         filter_func=expanduser
     )
@@ -36,33 +36,56 @@ def get_args():
         filter_func=lambda v: int(v)
     )
 
+    print(args)
+
     return args
 
 
 def build_parser():
-    parser = ArgumentParser()
+    parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 
     add_common_arguments(parser)
 
     subparsers = parser.add_subparsers(dest='subcommand')
 
+    # authorize
     add_authorize_parser(subparsers)
+
+    # list-label
     add_list_label_parser(subparsers)
 
+    # create-tables
     add_create_tables_parser(subparsers)
+
+    # drop-tables
     add_drop_tables_parser(subparsers)
 
+    # create-profile
+    add_create_profile_parser(subparsers)
+
+    # update-database
     add_update_database_parser(subparsers)
+
+    # rebuild-database
     add_rebuild_database_parser(subparsers)
 
+    # query
     add_query_parser(subparsers)
 
+    # fetch
     add_fetch_parser(subparsers)
+
+    # fetch-incrementally
     add_fetch_incrementally_parser(subparsers)
 
+    # fix-missing
     add_fix_missing_parser(subparsers)
 
+    # export
     add_export_parser(subparsers)
+
+    # message-structure
+    add_message_structure_parser(subparsers)
 
     return parser
 
@@ -80,145 +103,119 @@ def filter_arg_values(args, attributes, decision_func, filter_func):
 
 
 # sub parsers below ##############################################################################################
-def add_authorize_parser(subparsers):
-    p = subparsers.add_parser('authorize', aliases=['a'], help='OAUTH2 authorization')
+def add_subparser(subparsers, parser_name, **kwargs):
+    return subparsers.add_parser(parser_name, formatter_class=ArgumentDefaultsHelpFormatter, **kwargs)
 
-    add_credential_argument(p)
-    add_storage_argument(p)
+
+def add_authorize_parser(subparsers):
+    message = 'OAUTH2 authorization'
+    p = add_subparser(subparsers, 'authorize', aliases=['a'], help=message, description=message)
+
+    add_profile_path_argument(p)
 
 
 def add_list_label_parser(subparsers):
-    p = subparsers.add_parser('list-label', aliases=['ll'])
+    message = 'List email\'s label IDs'
+    p = add_subparser(subparsers, 'list-label', aliases=['ll'], help=message, description=message)
 
-    add_storage_argument(p)
-    add_email_argument(p)
+    add_profile_path_argument(p)
 
 
 def add_create_tables_parser(subparsers):
-    p = subparsers.add_parser('create-tables', aliases=['ct'])
+    message = 'Create database tables'
+    p = add_subparser(subparsers, 'create-tables', aliases=['ct'], help=message, description=message)
 
-    add_db_argument(p)
+    add_profile_path_argument(p)
 
 
 def add_drop_tables_parser(subparsers):
-    p = subparsers.add_parser('drop-tables', aliases=['dt'])
+    message = 'Drop database tables. Use with care!'
+    p = add_subparser(subparsers, 'drop-tables', aliases=['dt'], help=message, description=message)
 
-    add_db_argument(p)
+    add_profile_path_argument(p, required=True)
     add_force_argument(p)
 
 
-def add_update_database_parser(subparsers):
-    p = subparsers.add_parser('update-database', aliases=['ud'])
+def add_create_profile_parser(subparsers):
+    message = 'Create a profile for Diem. A profile is required to perform any diem tasks.'
+    p = add_subparser(subparsers, 'create-profile', aliases=['cp'], help=message, description=message)
 
-    add_db_argument(p)
-    add_storage_argument(p)
-    add_email_argument(p)
-    add_label_id_argument(p)
+    add_profile_arguments(p)
+
+
+def add_update_database_parser(subparsers):
+    message = 'Update database.'
+    p = add_subparser(subparsers, 'update-database', aliases=['ud'], help=message, description=message)
+
+    add_profile_path_argument(p, required=True)
 
 
 def add_rebuild_database_parser(subparsers):
-    p = subparsers.add_parser('rebuild-database', aliases=['rd'])
+    message = 'Rebuild database. The same as \'drop-tables\' and \'update-database\'.'
+    p = add_subparser(subparsers, 'rebuild-database', aliases=['rd'], help=message, description=message)
 
-    add_db_argument(p)
-    add_storage_argument(p)
-    add_email_argument(p)
-    add_label_id_argument(p)
+    add_profile_path_argument(p, required=True)
     add_force_argument(p)
 
 
 def add_query_parser(subparsers):
-    p = subparsers.add_parser('query', aliases=['q'])
+    message = 'Query DB.'
+    p = add_subparser(subparsers, 'query', aliases=['q'], help=message, description=message)
 
-    add_db_argument(p)
-    add_query_string_argument(p)
+    add_profile_path_argument(p, required=True)
+    add_query_string_argument(p, required=True)
 
 
 def add_fetch_parser(subparsers):
-    p = subparsers.add_parser('fetch', aliases=['f'])
+    message = 'Fetch one mail.'
+    p = add_subparser(subparsers, 'fetch', aliases=['f'], help=message, description=message)
 
-    add_storage_argument(p)
-    add_email_argument(p)
-    add_archive_path_argument(p)
+    add_profile_path_argument(p, required=True)
     add_mid_argument(p, required=True, nargs='+')
 
 
 def add_fetch_incrementally_parser(subparsers):
-    p = subparsers.add_parser('fetch-incrementally', aliases=['fi'])
+    message = 'Fetch incrementally. Update the database and fetch new reply mails.'
+    p = add_subparser(subparsers, 'fetch-incrementally', aliases=['fi'], help=message, description=message)
 
-    add_db_argument(p)
-    add_storage_argument(p)
-    add_email_argument(p)
-    add_label_id_argument(p)
-    add_archive_path_argument(p)
+    add_profile_path_argument(p, required=True)
 
 
 def add_fix_missing_parser(subparsers):
-    p = subparsers.add_parser('fix-missing', aliases=['fm'])
+    message = 'Fetch all reply mails that are not in archive path.'
+    p = add_subparser(subparsers, 'fix-missing', aliases=['fm'], help=message, description=message)
 
-    add_db_argument(p)
-    add_storage_argument(p)
-    add_email_argument(p)
-    add_archive_path_argument(p)
+    add_profile_path_argument(p, required=True)
 
 
 def add_export_parser(subparsers):
-    p = subparsers.add_parser('export', aliases=['e'])
+    message = 'Export reply mail.'
+    p = add_subparser(subparsers, 'export', aliases=['e'], help=message, description=message)
 
-    add_db_argument(p)
+    add_profile_path_argument(p, required=True)
     add_mid_argument(p, required=True)
-    add_archive_path_argument(p)
-
     p.add_argument('--list-converters', action='store_true')
+
+
+def add_message_structure_parser(subparsers):
+    message = 'Analyze and visualize message structure'
+    p = add_subparser(subparsers, 'message-structure', aliases=['ms'], help=message, description=message)
+
+    add_profile_path_argument(p, required=True)
+    add_mid_argument(p, required=True)
 
 # end of subparsers ##############################################################################################
 
 
 # arguments below ################################################################################################
-def add_credential_argument(parser, **kwargs):
-    parser.add_argument('-c', '--credential', default='credential.json',
-                        help='Credential file path. Defaults to credential.json.',
-                        **kwargs)
-
-
-def add_storage_argument(parser, **kwargs):
-    parser.add_argument('-s', '--storage', default='storage.json',
-                        help='OAUTH2 storage file path. '
-                             'Tokens are saved in this file. Defaults to storage.json.',
-                        **kwargs)
-
-
-def add_email_argument(parser, **kwargs):
-    parser.add_argument('-e', '--email', required=True,
-                        help='Your email address.',
-                        **kwargs)
-
-
-def add_label_id_argument(parser, **kwargs):
-    parser.add_argument('-k', '--label-id', required=True,
-                        help='Your target email label ID.',
-                        **kwargs)
-
-
-def add_db_argument(parser, **kwargs):
-    parser.add_argument('-d', '--database', default='diem.db',
-                        help='Database path. Defaults to diem.db.',
-                        **kwargs)
-
-
 def add_force_argument(parser, **kwargs):
     parser.add_argument('-f', '--force', action='store_true', default=False,
                         help='Do not ask when prompting.',
                         **kwargs)
 
 
-def add_archive_path_argument(parser, **kwargs):
-    parser.add_argument('-o', '--archive-path', default='archives',
-                        help='MIME Message output path. Defaults to archives.',
-                        **kwargs)
-
-
 def add_query_string_argument(parser, **kwargs):
-    parser.add_argument('-i', '--string', required=True, dest='query_string',
+    parser.add_argument('-s', '--string', dest='query_string',
                         help='Query string. '
                              'It can be an integer, a hexadecimal, or a date string in yyyy-mm-dd format. '
                              'Otherwise input \'latest\' string to get the latest, '
@@ -227,23 +224,36 @@ def add_query_string_argument(parser, **kwargs):
 
 
 def add_mid_argument(parser, **kwargs):
-    parser.add_argument('--mid',
-                        help='Fetch specific email by a mid (message id) value.',
-                        **kwargs)
+    parser.add_argument('-m', '--mid', help='Specify a email message id (mid) value.', **kwargs)
 
 
 def add_common_arguments(parser):
-    parser.add_argument('--log-file', default='lifemotif-diem.log',
-                        help='Log file path. Defaults to lifemotif-diem.log.')
+    parser.add_argument('-v', '--version', action='version', version=DIEM_VERSION, help='Show program version')
 
-    parser.add_argument('--log-level',
-                        choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', ],
-                        default='INFO',
-                        help='Log level. Defaults to INFO.')
+    parser.add_argument('-f', '--log-file', default='./lifemotif-diem.log', help='Log file path')
 
-    parser.add_argument('--timezone', default='Asia/Seoul')
+    parser.add_argument('-l', '--log-level', default='INFO',
+                        choices=['CRITICAL', 'ERROR', 'WARNING', 'INFO', 'DEBUG', ], help='Log level')
 
-    parser.add_argument('-v', '--version', action='version', version=DIEM_VERSION,
-                        help='Show program version.')
+
+def add_profile_arguments(parser):
+    parser.add_argument('-c', '--credential', default='./credential.json', help='Credential file path')
+
+    parser.add_argument('-d', '--database', default='./diem.db', help='Database path')
+
+    parser.add_argument('-s', '--storage', default='./storage.json', help='OAUTH2 token storage path')
+
+    parser.add_argument('-e', '--email', help='Your email address')
+
+    parser.add_argument('-k', '--label-id', help='Your target email label ID')
+
+    parser.add_argument('-x', '--archive-path', default='archives/', help='MIME Message archive path')
+
+    parser.add_argument('-t', '--timezone', default='UTC', help='Timezone for diary date')
+
+
+def add_profile_path_argument(parser, **kwargs):
+    parser.add_argument('-p', '--profile', default='./profile.json',
+                        help='Profile file path. \'run.py create-profile -h\' for help', **kwargs)
 
 # end of arguments ################################################################################################

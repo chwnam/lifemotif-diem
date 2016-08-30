@@ -1,24 +1,12 @@
 #!/bin/bash
 
-# Shell script to invoke diem-cli.py more easily.
-#
+PROFILE_PATH="/home/vagrant/profile-cs.chwnam@gmail.com.json"
 
-#### Set this variables ####
+LOG_LEVEL="DEBUG"
+LOG_FILE="~/lifemotif-diem.log"
 
-LOG_FILE=~/lifemotif-diem.log  # LOG FILE
-LOG_LEVEL=DEBUG                 # LOG PATH
-
-CREDENTIAL=credential.json     # CREDENTIAL PATH
-EMAIL="cs.chwnam@gmail.com"    # TARGET EMAIL
-LABEL_ID="Label_40"            # LABEL_ID (can be obtained by 'list-label' subcommand)
-
-STORAGE=~/storage-$EMAIL.json  # Storage (OAUTH2 token information) path
-DATABASE=~/lifemotif-diem.db   # SQLite3 DB (diary date info, email list) path
-
-ARCHIVE_PATH=~/archives/$EMAIL # Archive (gzipped MIME messages) path
-
-DIEM_PATH=~/shared/trusty-generic/lifemotif-diem              # Diem script path
-PYTHON_PATH="/home/vagrant/.venvs/lifemotif-diem/bin/python"  # Python3 path
+DIEM_PATH=~/shared/trusty-generic/lifemotif-diem # Diem script path
+PYTHON_PATH=~/.venvs/lifemotif-diem/bin/python   # Python3 path
 
 #### That'is it! Stop editing. ####
 
@@ -32,43 +20,12 @@ elif [[ $SUBCOMMAND == "version" || $SUBCOMMAND == "v" ]]; then
 	OPT="--$SUBCOMMAND"
 	SUBCOMMAND=""
 
-elif [[ $SUBCOMMAND == "authorize" || $SUBCOMMAND == "a" ]]; then
-	OPT="--credential $CREDENTIAL --storage $STORAGE ${@:2}"
+elif [[ $SUBCOMMAND == "create-profile" || $SUBCOMMAND == "cp" ]]; then
+	OPT="${@:2}"
 
-elif [[ $SUBCOMMAND == "list-label" || $SUBCOMMAND == "ll" ]]; then
-	OPT="--storage $STORAGE --email $EMAIL ${@:2}"
-
-elif [[ $SUBCOMMAND == "create-tables" || $SUBCOMMAND == "ct" ]]; then
-	OPT="--database $DATABASE ${@:2}"
-
-elif [[ $SUBCOMMAND == "drop-tables" || $SUBCOMMAND == "dt" ]]; then
-	OPT="--database $DATABASE ${@:2}"
-
-elif [[ $SUBCOMMAND == "update-database" || $SUBCOMMAND == "ud" ]]; then
-	OPT="--database $DATABASE --storage $STORAGE --email $EMAIL --label-id $LABEL_ID ${@:2}"
-
-elif [[ $SUBCOMMAND == "rebuild-database" || $SUBCOMMAND == "rd" ]]; then
-	OPT="--database $DATABASE --storage $STORAGE --email $EMAIL --label-id $LABEL_ID ${@:2}"
-
-elif [[ $SUBCOMMAND == "query" || $SUBCOMMAND == "q" ]]; then
-	OPT="--database $DATABASE --string ${@:2}"
-
-elif [[ $SUBCOMMAND == "fetch" || $SUBCOMMAND == "f" ]]; then
-	OPT="--storage $STORAGE --email $EMAIL --archive-path $ARCHIVE_PATH --mid ${@:2}"
-
-elif [[ $SUBCOMMAND == "fetch-incrementally" || $SUBCOMMAND == "fi" ]]; then
-	OPT="--database $DATABASE --storage $STORAGE --email $EMAIL --label-id $LABEL_ID --archive-path $ARCHIVE_PATH  ${@:2}"
-
-elif [[ $SUBCOMMAND == "fix-missing" || $SUBCOMMAND == "fm" ]]; then
-	OPT="--database $DATABASE --storage $STORAGE --email $EMAIL --archive-path $ARCHIVE_PATH  ${@:2}"
-
-elif [[ $SUBCOMMAND == "export" || $SUBCOMMAND == "e" ]]; then
-	OPT="--database $DATABASE --mid ${@:2} --archive-path $ARCHIVE_PATH"
-
+else
+	OPT="--profile $PROFILE_PATH ${@:2}"
 fi
 
-
-if [[ ! -z $OPT ]]; then
-    cd $DIEM_PATH  # change directory, path variables may be relative!
-    $PYTHON_PATH run.py --log-file $LOG_FILE --log-level $LOG_LEVEL $SUBCOMMAND $OPT
-fi
+cd $DIEM_PATH  # change directory, path variables may be relative!
+$PYTHON_PATH run.py --log-file $LOG_FILE --log-level $LOG_LEVEL $SUBCOMMAND $OPT

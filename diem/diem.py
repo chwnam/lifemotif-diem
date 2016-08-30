@@ -161,3 +161,27 @@ def export(conn, mid, archive_path, timezone):
     )
 
     return instance.convert()
+
+
+def message_structure(mid, archive_path):
+    from .converters import DefaultJSONConverter
+
+    parsed = DefaultJSONConverter.parse(gmail_fetch.get_archive(mid, archive_path))
+
+    return message_payload(parsed, {})
+
+
+def message_payload(obj, current_node):
+    if obj.is_multipart():
+
+        current_node['content-type'] = obj.get_content_type()
+        current_node['parts'] = []
+
+        for subpart in obj.get_payload():
+            entry = message_payload(subpart, {})
+            current_node['parts'].append(entry)
+
+        return current_node
+
+    else:
+        return obj.get_content_type()
