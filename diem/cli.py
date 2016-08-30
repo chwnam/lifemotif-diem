@@ -27,7 +27,7 @@ class DiemCLI(object):
 
         set_dict_config(self.args.log_level, self.args.log_file)
 
-        if 'timezone' in self.profile:
+        if self.profile and 'timezone' in self.profile:
             self.timezone = timezone(self.profile['timezone'])
         else:
             self.timezone = utc
@@ -49,7 +49,7 @@ class DiemCLI(object):
         logger.debug('profile: ' + str(self.profile))
 
         # open database if database property is present
-        if self.profile['database']:
+        if self.profile and self.profile['database']:
             conn = open_db(self.profile['database'])
         else:
             conn = None

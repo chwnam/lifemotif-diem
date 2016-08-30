@@ -36,8 +36,6 @@ def get_args():
         filter_func=lambda v: int(v)
     )
 
-    print(args)
-
     return args
 
 
