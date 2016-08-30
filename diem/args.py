@@ -18,14 +18,22 @@ def get_args():
         filter_func=expanduser
     )
 
-    expr = compile(r'^0x([0-9a-f]{16})$', IGNORECASE)
+    mid_expr = compile(r'^0x([0-9a-f]{16})$', IGNORECASE)
 
     # convert hexadecimal strings into decimal strings
     filter_arg_values(
         args=args,
-        attributes=['query', 'mid'],
-        decision_func=lambda v: expr.match(v),
+        attributes=['query_string', 'mid'],
+        decision_func=lambda v: mid_expr.match(v),
         filter_func=lambda v: int(v, 16)
+    )
+
+    # convert numerical date into int type
+    filter_arg_values(
+        args=args,
+        attributes=['query_string', 'mid'],
+        decision_func=lambda v: v.isdigit(),
+        filter_func=lambda v: int(v)
     )
 
     return args
@@ -204,7 +212,8 @@ def add_query_string_argument(parser, **kwargs):
     parser.add_argument('-i', '--string', required=True, dest='query_string',
                         help='Query string. '
                              'It can be an integer, a hexadecimal, or a date string in yyyy-mm-dd format. '
-                             'Otherwise input \'latest\' string to get the latest.',
+                             'Otherwise input \'latest\' string to get the latest, '
+                             'or input \'all\' to dump all entries.',
                         **kwargs)
 
 

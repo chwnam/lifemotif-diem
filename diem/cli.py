@@ -77,10 +77,17 @@ class DiemCLI(object):
 
         # query
         elif self.args.subcommand in ('query', 'q'):
-            diem.query(
+            response = diem.query(
                 conn=conn,
                 query_string=self.args.query_string
             )
+
+            if not response:
+                print('No result.')
+            else:
+                print('MID\t\t\t\t\t\tTID\t\t\t\t\t\tDIARY DATE')
+                for mid, tid, diary_date in response:
+                    print('{0} (0x{0:x})\t{1} (0x{1:x})\t{2}'.format(mid, tid, diary_date, ))
 
         # fetch
         elif self.args.subcommand in ('fetch', 'f'):
