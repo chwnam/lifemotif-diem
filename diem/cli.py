@@ -159,6 +159,20 @@ class DiemCLI(object):
             structure = diem.message_structure(self.args.mid, self.profile['archive-path'])
             self.print_message_structure(structure)
 
+        # view-diary
+        elif self.args.subcommand in ('view-diary', 'vd'):
+            diary_content = diem.view_diary(self.args.mid, self.profile['archive-path'], self.args.content_type)
+            print(diary_content)
+
+        # extract-attachment
+        elif self.args.subcommand in ('extract-attachments', 'ea'):
+            if self.args.all:
+                attachment_ids = 'all'
+            else:
+                attachment_ids = self.args.attachment_id
+
+            diem.extract_attachments(self.args.mid, self.profile['archive-path'], attachment_ids, self.args.dest_dir)
+
         # END of task
 
         if conn:
@@ -210,4 +224,8 @@ class DiemCLI(object):
                 current_node.addChild(entry)
             return current_node
         else:
-            return Tree(structure)
+            if ('file-name' in structure and structure['file-name']) and \
+                    ('attachment-id' in structure and structure['attachment-id']):
+                return Tree(structure)
+            else:
+                return Tree(structure['content-type'])

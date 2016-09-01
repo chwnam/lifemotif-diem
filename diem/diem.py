@@ -3,9 +3,13 @@ from os.path import join as path_join
 from os.path import exists as path_exists
 from re import match
 
-from . import db as diem_db
 from gmail.api import get_service
 from gmail import fetch as gmail_fetch
+
+from . import get_absolute_path
+from . import db as diem_db
+from .converters import DefaultJSONConverter
+
 
 logger = getLogger(__name__)
 
@@ -164,24 +168,56 @@ def export(conn, mid, archive_path, timezone):
 
 
 def message_structure(mid, archive_path):
-    from .converters import DefaultJSONConverter
+    parsed = DefaultJSONConverter.parse(gmail_fetch.get_archive(mid, archive_path))
+    return DefaultJSONConverter.get_message_structure(parsed)
 
+
+def view_diary(mid, archive_path, content_type):
     parsed = DefaultJSONConverter.parse(gmail_fetch.get_archive(mid, archive_path))
 
-    return message_payload(parsed, {})
+    if content_type in ('text/html', 'text/plain'):
+        subpart = DefaultJSONConverter.find_subpart(parsed, content_type)
+        return str(subpart.get_payload(decode=True), encoding=subpart.get_content_charset())
 
 
-def message_payload(obj, current_node):
-    if obj.is_multipart():
+def extract_attachments(mid, archive_path, attachment_ids, dest_dir):
+    parsed = DefaultJSONConverter.parse(gmail_fetch.get_archive(mid, archive_path))
+    _dest_dir = get_absolute_path(dest_dir)
 
-        current_node['content-type'] = obj.get_content_type()
-        current_node['parts'] = []
-
-        for subpart in obj.get_payload():
-            entry = message_payload(subpart, {})
-            current_node['parts'].append(entry)
-
-        return current_node
-
+    # in 'all' condition, found_table is None.
+    # if attachment_ids is a list, found_table is a dict whose keys are attachment_ids, initialized with False value
+    found_table = None
+    if type(attachment_ids) == list:
+        found_table = {}
+        for id in attachment_ids:
+            found_table[id] = False
+    elif attachment_ids == 'all':
+        found_table = None
     else:
-        return obj.get_content_type()
+        Exception('Invalid attachment_ids: %s' % attachment_ids)
+
+    # traversing all multi-parts, extract specified files
+    for part in parsed.walk():
+        file_name = part.get_filename()
+
+        if not file_name:
+            continue
+
+        attachment_id = part.get('X-Attachment-Id') or part.get('Content-ID').strip('<>')
+        # if attachment_ids were a list:
+        if found_table:
+            if attachment_id in found_table and not found_table[attachment_id]:
+                found_table[attachment_id] = True  # attachment_id is found
+            else:
+                # If attachment_id is not in the list, then the case is supposed to be skipped.
+                continue
+
+        # extract this file
+        with open(path_join(_dest_dir, file_name), 'wb') as f:
+            f.write(part.get_payload(decode=True))
+
+        logger.debug('MID %d (0x%x) attachment id \'%s\' extracted as \'%s\'.' % (mid, mid, attachment_id, file_name))
+
+
+
+

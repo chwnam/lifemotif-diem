@@ -13,7 +13,7 @@ def get_args():
     # expand ~ as home directory
     filter_arg_values(
         args=args,
-        attributes=['log_file', ],
+        attributes=['log_file', 'dest_dir'],
         decision_func=lambda v: len(v) > 1 and v[0] == '~',
         filter_func=expanduser
     )
@@ -84,6 +84,12 @@ def build_parser():
 
     # message-structure
     add_message_structure_parser(subparsers)
+
+    # view
+    add_view_diary_parser(subparsers)
+
+    # extract-attachment
+    add_extract_attachment_parser(subparsers)
 
     return parser
 
@@ -201,6 +207,30 @@ def add_message_structure_parser(subparsers):
 
     add_profile_path_argument(p, required=True)
     add_mid_argument(p, required=True)
+
+
+def add_view_diary_parser(subparsers):
+    message = 'View diary content'
+    p = add_subparser(subparsers, 'view-diary', aliases=['vd'], help=message, description=message)
+
+    add_profile_path_argument(p, required=True)
+    add_mid_argument(p, required=True)
+    p.add_argument('--content-type', default='text/html', choices=['text/html', 'text/plain'])
+
+
+def add_extract_attachment_parser(subparsers):
+    message = 'Extract attachment files in a message.'
+    p = add_subparser(subparsers, 'extract-attachments', aliases=['ea'], help=message, description=message)
+
+    add_profile_path_argument(p, required=True)
+    add_mid_argument(p, required=True)
+
+    group = p.add_mutually_exclusive_group()
+    group.add_argument('-i', '--attachment-id', nargs='+', help='Extract an individual attachment file')
+    group.add_argument('-a', '--all', action='store_true', help='Extract all attachment files')
+
+    p.add_argument('-d', '--dest-dir', default='.',
+                   help='A directory where extracted files being stored. Notice that files will be overwritten!')
 
 # end of subparsers ##############################################################################################
 

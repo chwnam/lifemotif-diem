@@ -13,8 +13,7 @@ class DiaryTemplateFactory(object):
             'email-date': None,
             'content': '',
             'content-type': 'text/plain',
-            'attachments': {
-            }
+            'attachments': []
         }
 
     @classmethod
@@ -43,16 +42,49 @@ class DefaultJSONConverter(object):
         else:
             raise Exception('Parse failed!')
 
+    @classmethod
+    def get_message_structure(cls, message_object):
+        return cls._get_message_structure_recursively(message_object, {})
+
+    @classmethod
+    def _get_message_structure_recursively(cls, message_object, current_node):
+        if message_object.is_multipart():
+
+            current_node['content-type'] = message_object.get_content_type()
+            current_node['parts'] = []
+
+            for subpart in message_object.get_payload():
+                entry = cls._get_message_structure_recursively(subpart, {})
+                current_node['parts'].append(entry)
+
+            return current_node
+
+        else:
+            content_type = message_object.get_content_type()
+            file_name = message_object.get_filename()
+            if file_name:
+                attachment_id = message_object.get('X-Attachment-Id') or message_object.get('Content-ID').strip('<>')
+            else:
+                attachment_id = None
+
+            return {
+                'content-type': content_type,
+                'file-name': file_name,
+                'attachment-id': attachment_id
+            }
+
     def convert(self):
         parsed = self.parse(self.message)
         output_object = DiaryTemplateFactory.get_template()
 
         content_type, content = self.get_content(parsed)
+        attachments = self.get_attachments(parsed)
 
         output_object['diary-date'] = self.diary_date
         output_object['email-date'] = self.get_email_date(parsed)
         output_object['content'] = content
         output_object['content-type'] = content_type
+        output_object['attachments'] = attachments
 
         return output_object
 
@@ -76,6 +108,19 @@ class DefaultJSONConverter(object):
             return content_type, str(part.get_payload(decode=True), encoding=part.get_content_charset())
 
         return None, None
+
+    @staticmethod
+    def get_attachments(obj):
+        attachments = []
+        for part in obj.walk():
+            file_name = part.get_filename()
+            if file_name:
+                attachments.append({
+                    'file-name': file_name,
+                    'content-type': part.get_content_type(),
+                    'content-id': part.get('X-Attachment-Id') or part.get('Content-ID')
+                })
+        return attachments
 
     @staticmethod
     def find_subpart(obj, content_type):
